@@ -255,6 +255,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     controller: customerSearchController,
                     onChanged: _filterCustomers,
                     cursorColor: Colors.white,
+                    autofocus: true, // Enable autofocus
                     decoration: InputDecoration(
                       hintText: "Search Customer",
                       hintStyle: const TextStyle(color: Colors.white),

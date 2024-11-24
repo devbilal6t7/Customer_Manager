@@ -267,8 +267,14 @@ class _CashInScreenState extends State<CashInScreen> {
                     ),
                   );
 
-                  Navigator.pop(context, true);
+                  setState(() {
+                    customerSearchController.clear();
+                    amountController.clear(); // Clear amount input
+                    selectedCustomer = null; // Reset selected customer
+                    selectedSubtype = 'Cash'; // Reset subtype
+                  });
                 },
+
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondaryColor,
                   padding:
