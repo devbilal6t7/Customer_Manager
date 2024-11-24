@@ -16,6 +16,7 @@ class _CashInScreenState extends State<CashInScreen> {
   List<Map> customers = [];
   List<Map> filteredCustomers = [];
   String? selectedCustomer;
+  String selectedSubtype = 'Cash'; // Default subtype is "Cash"
 
   @override
   void initState() {
@@ -24,11 +25,9 @@ class _CashInScreenState extends State<CashInScreen> {
   }
 
   Future<void> _fetchCustomers() async {
-
     final customersBox = Hive.isBoxOpen('customers')
         ? Hive.box<Map>('customers')
         : await Hive.openBox<Map>('customers');
-
 
     setState(() {
       customers = customersBox.values.toList();
@@ -47,6 +46,46 @@ class _CashInScreenState extends State<CashInScreen> {
             .toList();
       }
     });
+  }
+
+  void _showSubtypeOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              title: const Text("Concession"),
+              onTap: () => _selectSubtype("Concession"),
+            ),
+            ListTile(
+              title: const Text("JazzCash/EasyPaisa"),
+              onTap: () => _selectSubtype("JazzCash/EasyPaisa"),
+            ),
+            ListTile(
+              title: const Text("Check"),
+              onTap: () => _selectSubtype("Check"),
+            ),
+            ListTile(
+              title: const Text("Amanat"),
+              onTap: () => _selectSubtype("Amanat"),
+            ),
+            ListTile(
+              title: const Text("By Other Bank"),
+              onTap: () => _selectSubtype("By Other Bank"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _selectSubtype(String subtype) {
+    setState(() {
+      selectedSubtype = subtype;
+    });
+    Navigator.pop(context);
   }
 
   @override
@@ -90,12 +129,11 @@ class _CashInScreenState extends State<CashInScreen> {
                 style: const TextStyle(color: Colors.white),
               ),
               const SizedBox(height: 10),
-              selectedCustomer != null
-                  ? Text(
-                "Selected: $selectedCustomer",
-                style: const TextStyle(color: Colors.white),
-              )
-                  : const SizedBox(),
+              if (selectedCustomer != null)
+                Text(
+                  "Selected: $selectedCustomer",
+                  style: const TextStyle(color: Colors.white),
+                ),
               const SizedBox(height: 20),
               SizedBox(
                 height: 150,
@@ -103,12 +141,22 @@ class _CashInScreenState extends State<CashInScreen> {
                   itemCount: filteredCustomers.length,
                   itemBuilder: (context, index) {
                     final customer = filteredCustomers[index];
+                    final isSelected = customer['name'] == selectedCustomer;
+
                     return ListTile(
                       title: Text(
                         customer['name'],
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(
+                          color: isSelected
+                              ? AppColors.secondaryColor
+                              : Colors.white,
+                          fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
                       ),
-                      tileColor: AppColors.secondaryColor.withOpacity(0.1),
+                      tileColor: isSelected
+                          ? AppColors.secondaryColor.withOpacity(0.3)
+                          : AppColors.secondaryColor.withOpacity(0.1),
                       onTap: () {
                         setState(() {
                           selectedCustomer = customer['name'];
@@ -134,6 +182,46 @@ class _CashInScreenState extends State<CashInScreen> {
                   ),
                 ),
                 style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        selectedSubtype = "Cash";
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      foregroundColor: Colors.white,
+                      backgroundColor: selectedSubtype == "Cash"
+                          ? Colors.green
+                          : AppColors.secondaryColor,
+                    ),
+                    child: const Text("Cash"),
+                  ),
+                  ElevatedButton(
+                    onPressed: _showSubtypeOptions,
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      backgroundColor: selectedSubtype != "Cash"
+                          ? Colors.green
+                          : AppColors.secondaryColor,
+                    ),
+                    child:  Text(
+                      selectedSubtype != "Cash"
+                        ? selectedSubtype
+                        : "Other",
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 30),
               ElevatedButton.icon(
@@ -168,13 +256,14 @@ class _CashInScreenState extends State<CashInScreen> {
                     'name': selectedCustomer,
                     'cash_in': amount,
                     'cash_out': 0,
+                    'subtype': selectedSubtype,
                     'date': DateTime.now().toIso8601String(),
                   });
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                        content: Text(
-                            "Cash-In of $amount added for $selectedCustomer!"),
+                      content: Text(
+                          "Cash-In of $amount added for $selectedCustomer (Subtype: $selectedSubtype)!"),
                     ),
                   );
 

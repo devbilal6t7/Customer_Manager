@@ -222,7 +222,7 @@ class _AllCustomersState extends State<AllCustomers> {
                             Text(
                               balance.toString(),
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 12,
                                 color:
                                 balance < 0 ? Colors.red : Colors.green,
                                 fontWeight: FontWeight.bold,

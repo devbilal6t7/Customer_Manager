@@ -134,4 +134,14 @@ class HiveDatabaseHelper {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getHistoryBySubtype(String type, String subtype) async {
+    final historyBox = Hive.box<Map>(_cashHistoryBoxName);
+
+    return historyBox.values
+        .where((record) =>
+    record['subtype'] == subtype && record[type] > 0)
+        .cast<Map<String, dynamic>>()
+        .toList();
+  }
+
 }

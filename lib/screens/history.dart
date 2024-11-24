@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/adapters.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -93,12 +93,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
               pw.Text("Transaction Details:"),
               pw.SizedBox(height: 8),
               pw.Table.fromTextArray(
-                headers: ['Date', 'CashIn', 'CashOut'],
+                headers: ['Date', 'CashIn', 'CashOut', 'Subtype'],
                 data: historyList.map((record) {
                   return [
-                    record['date'],
+                    _formatDate(record['date']),
                     record['cash_in'].toString(),
                     record['cash_out'].toString(),
+                    record['subtype'] ?? 'Cash',
                   ];
                 }).toList(),
               ),
@@ -163,10 +164,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-
-
-
-
   Future<void> _importDatabase() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -181,19 +178,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final Map<String, dynamic> data = jsonDecode(jsonString);
 
       for (var boxName in data.keys) {
-
         var box = Hive.isBoxOpen(boxName)
             ? Hive.box<Map>(boxName)
             : await Hive.openBox<Map>(boxName);
 
-
         await box.clear();
-
 
         final formattedData = (data[boxName] as Map<String, dynamic>).map((key, value) {
           return MapEntry(key, Map<dynamic, dynamic>.from(value));
         });
-
 
         await box.putAll(formattedData);
       }
@@ -201,7 +194,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Database imported successfully!")),
       );
-
 
       await _fetchCustomers();
       setState(() {
@@ -215,8 +207,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-
-
   String _formatDate(String dateTimeString) {
     try {
       final dateTime = DateTime.parse(dateTimeString);
@@ -225,7 +215,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return dateTimeString;
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -324,11 +313,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       itemCount: historyList.length,
                       itemBuilder: (context, index) {
                         final record = historyList[index];
-
-
-                        final subtitleText = (record['cash_in'] != null && record['cash_in'] > 0)
+                        final isCashIn =
+                        (record['cash_in'] != null && record['cash_in'] > 0);
+                        final subtitleText = isCashIn
                             ? "CashIn: ${record['cash_in']}"
                             : "CashOut: ${record['cash_out']}";
+                        final subtypeText = record['subtype'] ?? 'Cash';
+
                         return Card(
                           color: AppColors.secondaryColor.withOpacity(0.1),
                           margin: const EdgeInsets.symmetric(vertical: 5),
@@ -339,7 +330,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                             subtitle: Text(
                               subtitleText,
-                              style:  TextStyle(color: (record['cash_in'] != null && record['cash_in'] > 0) ? Colors.red : Colors.green ),
+                              style: TextStyle(
+                                color: isCashIn ? Colors.red : Colors.green,
+                              ),
+                            ),
+                            trailing: Text(
+                              subtypeText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontStyle: FontStyle.italic,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
                         );

@@ -17,6 +17,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
   List<Map> filteredCustomers = [];
   String? selectedCustomer;
   int balance = 0;
+  String selectedSubtype = 'Cash'; // Default subtype is "Cash"
 
   @override
   void initState() {
@@ -25,7 +26,6 @@ class _CashOutScreenState extends State<CashOutScreen> {
   }
 
   Future<void> _fetchCustomers() async {
-    // Ensure the box is open
     final customersBox = Hive.isBoxOpen('customers')
         ? Hive.box<Map>('customers')
         : await Hive.openBox<Map>('customers');
@@ -51,7 +51,6 @@ class _CashOutScreenState extends State<CashOutScreen> {
       }
     }
 
-    // Update balance
     setState(() {
       balance = totalCashOut - totalCashIn;
     });
@@ -68,6 +67,88 @@ class _CashOutScreenState extends State<CashOutScreen> {
             .toList();
       }
     });
+  }
+
+  void _showSubtypeOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              title: const Text("Concession"),
+              onTap: () => _selectSubtype("Concession"),
+            ),
+            ListTile(
+              title: const Text("JazzCash/EasyPaisa"),
+              onTap: () => _selectSubtype("JazzCash/EasyPaisa"),
+            ),
+            ListTile(
+              title: const Text("Check"),
+              onTap: () => _selectSubtype("Check"),
+            ),
+            ListTile(
+              title: const Text("Amanat"),
+              onTap: () => _selectSubtype("Amanat"),
+            ),
+            ListTile(
+              title: const Text("By Other Bank"),
+              onTap: () => _selectSubtype("By Other Bank"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _selectSubtype(String subtype) {
+    setState(() {
+      selectedSubtype = subtype;
+    });
+    Navigator.pop(context);
+  }
+
+  Future<void> _processCashOut() async {
+    if (selectedCustomer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select a customer")),
+      );
+      return;
+    }
+    if (amountController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter an amount")),
+      );
+      return;
+    }
+    final amount = int.tryParse(amountController.text) ?? 0;
+    if (amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Enter a valid amount")),
+      );
+      return;
+    }
+
+    final historyBox = Hive.box<Map>('cashHistory');
+    await historyBox.add({
+      'name': selectedCustomer,
+      'cash_in': 0,
+      'cash_out': amount,
+      'subtype': selectedSubtype,
+      'date': DateTime.now().toIso8601String(),
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            "Cash-Out of $amount added for $selectedCustomer (Subtype: $selectedSubtype)!"),
+      ),
+    );
+
+    // Clear the input and reload balance
+    amountController.clear();
+    await _fetchBalance(selectedCustomer!);
   }
 
   @override
@@ -144,7 +225,8 @@ class _CashOutScreenState extends State<CashOutScreen> {
                           color: isSelected
                               ? AppColors.secondaryColor
                               : Colors.white,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       tileColor: isSelected
@@ -177,6 +259,44 @@ class _CashOutScreenState extends State<CashOutScreen> {
                 ),
                 style: const TextStyle(color: Colors.white),
               ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        selectedSubtype = "Cash";
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      backgroundColor: selectedSubtype == "Cash"
+                          ? Colors.green
+                          : AppColors.secondaryColor,
+                    ),
+                    child: const Text("Cash"),
+                  ),
+                  ElevatedButton(
+                    onPressed: _showSubtypeOptions,
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      backgroundColor: selectedSubtype != "Cash"
+                          ? Colors.green
+                          : AppColors.secondaryColor,
+                    ),
+                    child:  Text(selectedSubtype != "Cash"
+                        ? selectedSubtype
+                        : "Other"),
+                  ),
+                ],
+              ),
               const SizedBox(height: 30),
               ElevatedButton.icon(
                 icon: const Icon(Icons.attach_money, color: Colors.white),
@@ -184,45 +304,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
                   "Process Cash-Out",
                   style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
-                onPressed: () async {
-                  if (selectedCustomer == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Please select a customer")),
-                    );
-                    return;
-                  }
-                  if (amountController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Please enter an amount")),
-                    );
-                    return;
-                  }
-                  final amount = int.tryParse(amountController.text) ?? 0;
-                  if (amount <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Enter a valid amount")),
-                    );
-                    return;
-                  }
-
-                  final historyBox = Hive.box<Map>('cashHistory');
-                  await historyBox.add({
-                    'name': selectedCustomer,
-                    'cash_in': 0,
-                    'cash_out': amount,
-                    'date': DateTime.now().toIso8601String(),
-                  });
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(
-                            "Cash-Out of $amount added for $selectedCustomer!",
-                        ),
-                    ),
-                  );
-
-                  Navigator.pop(context, true);
-                },
+                onPressed: _processCashOut,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondaryColor,
                   padding:
