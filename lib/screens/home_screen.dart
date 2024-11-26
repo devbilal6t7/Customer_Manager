@@ -92,40 +92,40 @@ class _HomeScreenState extends State<HomeScreen> {
       await _fetchTotalsForDate(picked);
     }
   }
-  Future<void> _clearAllData() async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Confirm Delete"),
-        content: const Text(
-            "Are you sure you want to clear all data? This action cannot be undone."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text("Delete"),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldDelete == true) {
-      await Hive.box<Map>('customers').clear();
-      await Hive.box<Map>('cashHistory').clear();
-      await Hive.box<Map>('userCredentials').clear();
-      setState(() {
-        totalCashIn = 0;
-        totalCashOut = 0;
-        balance = 0;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("All data has been cleared.")),
-      );
-    }
-  }
+  // Future<void> _clearAllData() async {
+  //   final shouldDelete = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text("Confirm Delete"),
+  //       content: const Text(
+  //           "Are you sure you want to clear all data? This action cannot be undone."),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(false),
+  //           child: const Text("Cancel"),
+  //         ),
+  //         ElevatedButton(
+  //           onPressed: () => Navigator.of(context).pop(true),
+  //           child: const Text("Delete"),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //
+  //   if (shouldDelete == true) {
+  //     await Hive.box<Map>('customers').clear();
+  //     await Hive.box<Map>('cashHistory').clear();
+  //     await Hive.box<Map>('userCredentials').clear();
+  //     setState(() {
+  //       totalCashIn = 0;
+  //       totalCashOut = 0;
+  //       balance = 0;
+  //     });
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text("All data has been cleared.")),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -178,13 +178,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildSummaryCard("CashIn", "$totalCashIn", AppColors.secondaryColor),
+                      _buildSummaryCard(" وصول", "$totalCashIn", AppColors.secondaryColor),
                       _buildSummaryCard(
-                        "Balance",
+                        " بقایا",
                         "$balance",
                         balance >= 0 ? Colors.green : Colors.yellow,
                       ),
-                      _buildSummaryCard("CashOut", "$totalCashOut", Colors.redAccent),
+                      _buildSummaryCard(" مال/بل", "$totalCashOut", Colors.redAccent),
                     ],
                   ),
                   const SizedBox(height: 60),
@@ -193,14 +193,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       _buildActionButton(
                         context,
-                        "CashIn",
+                        " وصول",
                         const CashInScreen(),
                         AppColors.secondaryColor,
                         Colors.white,
                       ),
                       _buildActionButton(
                         context,
-                        "CashOut",
+                        " مال/بل",
                         const CashOutScreen(),
                         Colors.redAccent,
                         Colors.white,
@@ -228,7 +228,8 @@ class _HomeScreenState extends State<HomeScreen> {
             color: AppColors.secondaryColor,
             alignment: Alignment.center,
             child: Text(
-              "Customer Manager",
+              "Customer Manager   کسٹمر مینیجر",
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.mainColor,
                 fontSize: 24,
@@ -242,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ListTile(
                   leading: const Icon(Icons.history, color: Colors.white),
                   title: const Text(
-                    "History",
+                    "History    تاریخ  ",
                     style: TextStyle(color: Colors.white),
                   ),
                   onTap: () {
@@ -271,7 +272,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ListTile(
                   leading: const Icon(Icons.man, color: Colors.white),
                   title: const Text(
-                    "All Customers",
+                    "All Customers  گاہک",
                     style: TextStyle(color: Colors.white),
                   ),
                   onTap: () {

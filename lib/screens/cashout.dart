@@ -10,7 +10,8 @@ class CashOutScreen extends StatefulWidget {
 }
 
 class _CashOutScreenState extends State<CashOutScreen> {
-  final TextEditingController customerSearchController = TextEditingController();
+  final TextEditingController customerSearchController =
+      TextEditingController();
   final TextEditingController amountController = TextEditingController();
 
   List<Map> customers = [];
@@ -63,7 +64,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
       } else {
         filteredCustomers = customers
             .where((customer) =>
-            customer['name'].toLowerCase().contains(query.toLowerCase()))
+                customer['name'].toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
@@ -130,6 +131,19 @@ class _CashOutScreenState extends State<CashOutScreen> {
       return;
     }
 
+    // Check if the last digit is zero
+    if (amount % 10 != 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "براہ کرم رقم چیک کریں۔ آخری ہندسہ صفر ہونا ضروری ہے۔",
+            style: TextStyle(fontSize: 16),
+          ),
+        ),
+      );
+      return;
+    }
+
     final historyBox = Hive.box<Map>('cashHistory');
     await historyBox.add({
       'name': selectedCustomer,
@@ -156,7 +170,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
     return Scaffold(
       backgroundColor: AppColors.mainColor,
       appBar: AppBar(
-        title: const Text("Cash Out"),
+        title: const Text(" مال/بل"),
         backgroundColor: AppColors.secondaryColor,
         foregroundColor: Colors.white,
       ),
@@ -167,7 +181,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                "Cash Out",
+                " مال/بل",
                 style: TextStyle(
                   color: AppColors.secondaryColor,
                   fontSize: 24,
@@ -180,7 +194,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
                 onChanged: _filterCustomers,
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
-                  hintText: "Search Customer",
+                  hintText: "کسٹمر تلاش کریں۔",
                   hintStyle: const TextStyle(color: Colors.white),
                   filled: true,
                   fillColor: AppColors.secondaryColor.withOpacity(0.2),
@@ -193,22 +207,31 @@ class _CashOutScreenState extends State<CashOutScreen> {
               ),
               const SizedBox(height: 10),
               selectedCustomer != null
-                  ? Column(
-                children: [
-                  Text(
-                    "Selected: $selectedCustomer",
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    "Balance: $balance",
-                    style: TextStyle(
-                      color: balance >= 0 ? Colors.green : Colors.red,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              )
+                  ? Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Selected: $selectedCustomer",
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            " بقایا : $balance",
+                            style: TextStyle(
+                                color: balance >= 0 ? Colors.green : Colors.red,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
                   : const SizedBox(),
               const SizedBox(height: 10),
               SizedBox(
@@ -226,7 +249,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
                               ? AppColors.secondaryColor
                               : Colors.white,
                           fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       tileColor: isSelected
@@ -248,7 +271,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
                 keyboardType: TextInputType.number,
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
-                  hintText: "Enter cash-out amount",
+                  hintText: "  مال/بل کی رقم درج کریں۔ ",
                   hintStyle: const TextStyle(color: Colors.white),
                   filled: true,
                   fillColor: AppColors.secondaryColor.withOpacity(0.2),
@@ -291,9 +314,8 @@ class _CashOutScreenState extends State<CashOutScreen> {
                           ? Colors.green
                           : AppColors.secondaryColor,
                     ),
-                    child:  Text(selectedSubtype != "Cash"
-                        ? selectedSubtype
-                        : "Other"),
+                    child: Text(
+                        selectedSubtype != "Cash" ? selectedSubtype : "Other"),
                   ),
                 ],
               ),
@@ -301,14 +323,14 @@ class _CashOutScreenState extends State<CashOutScreen> {
               ElevatedButton.icon(
                 icon: const Icon(Icons.attach_money, color: Colors.white),
                 label: const Text(
-                  "Process Cash-Out",
+                  "Process مال/بل",
                   style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
                 onPressed: _processCashOut,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondaryColor,
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),

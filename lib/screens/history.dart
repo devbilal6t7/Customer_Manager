@@ -280,7 +280,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             customer['name'],
                             style: const TextStyle(color: Colors.white),
                           ),
-                          tileColor: AppColors.secondaryColor.withOpacity(0.2),
+                          // tileColor: AppColors.secondaryColor.withOpacity(0.2),
                           onTap: () {
                             setState(() {
                               selectedCustomer = customer['name'];
@@ -317,9 +317,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         final isCashIn =
                         (record['cash_in'] != null && record['cash_in'] > 0);
                         final subtitleText = isCashIn
-                            ? "CashIn: ${record['cash_in']}"
-                            : "CashOut: ${record['cash_out']}";
+                            ? "وصول : ${record['cash_in']}"
+                            : "مال/بل : ${record['cash_out']}";
                         final subtypeText = record['subtype'] ?? 'Cash';
+                        int balance = 0;
+                        for (int i = 0; i <= index; i++) {
+                          final currentRecord = historyList[i];
+                          balance += (currentRecord['cash_in'] as int? ?? 0);
+                          balance -= (currentRecord['cash_out'] as int? ?? 0);
+                        }
 
                         return Card(
                           color: AppColors.secondaryColor.withOpacity(0.1),
@@ -329,11 +335,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               "Date: ${_formatDate(record['date'])}",
                               style: const TextStyle(color: Colors.white),
                             ),
-                            subtitle: Text(
-                              subtitleText,
-                              style: TextStyle(
-                                color: isCashIn ? Colors.red : Colors.green,
-                              ),
+                            subtitle: Row(
+                              children: [
+                                Text(
+                                  "$subtitleText ",
+                                  style: TextStyle(
+                                    color: isCashIn ? Colors.red : Colors.green,
+                                  ),
+                                ),
+                                const SizedBox(width: 10,),
+                                Text(
+                                  " || بقایا : $balance ",
+                                  style: TextStyle(
+                                    color: Colors.yellow,
+                                  ),
+                                ),
+                              ],
                             ),
                             trailing: Text(
                               subtypeText,

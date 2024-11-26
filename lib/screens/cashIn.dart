@@ -12,11 +12,11 @@ class CashInScreen extends StatefulWidget {
 class _CashInScreenState extends State<CashInScreen> {
   final TextEditingController customerSearchController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
-
+  int balance = 0;
   List<Map> customers = [];
   List<Map> filteredCustomers = [];
   String? selectedCustomer;
-  String selectedSubtype = 'Cash'; // Default subtype is "Cash"
+  String selectedSubtype = 'Cash';
 
   @override
   void initState() {
@@ -45,6 +45,25 @@ class _CashInScreenState extends State<CashInScreen> {
             customer['name'].toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
+    });
+  }
+  Future<void> _fetchBalance(String customerName) async {
+    final cashHistoryBox = Hive.isBoxOpen('cashHistory')
+        ? Hive.box<Map>('cashHistory')
+        : await Hive.openBox<Map>('cashHistory');
+
+    int totalCashIn = 0;
+    int totalCashOut = 0;
+
+    for (var record in cashHistoryBox.values) {
+      if (record['name'] == customerName) {
+        totalCashIn += record['cash_in'] as int? ?? 0;
+        totalCashOut += record['cash_out'] as int? ?? 0;
+      }
+    }
+
+    setState(() {
+      balance = totalCashOut - totalCashIn;
     });
   }
 
@@ -93,7 +112,7 @@ class _CashInScreenState extends State<CashInScreen> {
     return Scaffold(
       backgroundColor: AppColors.mainColor,
       appBar: AppBar(
-        title: const Text("Cash In"),
+        title: const Text(" وصول"),
         backgroundColor: AppColors.secondaryColor,
         foregroundColor: Colors.white,
       ),
@@ -104,7 +123,7 @@ class _CashInScreenState extends State<CashInScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                "Cash In",
+                " وصول",
                 style: TextStyle(
                   color: AppColors.secondaryColor,
                   fontSize: 24,
@@ -117,7 +136,7 @@ class _CashInScreenState extends State<CashInScreen> {
                 onChanged: _filterCustomers,
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
-                  hintText: "Search Customer",
+                  hintText: "کسٹمر تلاش کریں۔",
                   hintStyle: const TextStyle(color: Colors.white),
                   filled: true,
                   fillColor: AppColors.secondaryColor.withOpacity(0.2),
@@ -130,9 +149,30 @@ class _CashInScreenState extends State<CashInScreen> {
               ),
               const SizedBox(height: 10),
               if (selectedCustomer != null)
-                Text(
-                  "Selected: $selectedCustomer",
-                  style: const TextStyle(color: Colors.white),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Selected: $selectedCustomer",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        " بقایا : $balance",
+                        style: TextStyle(
+                            color: balance >= 0 ? Colors.green : Colors.red,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               const SizedBox(height: 20),
               SizedBox(
@@ -156,11 +196,12 @@ class _CashInScreenState extends State<CashInScreen> {
                       ),
                       tileColor: isSelected
                           ? AppColors.secondaryColor.withOpacity(0.3)
-                          : AppColors.secondaryColor.withOpacity(0.1),
+                          : null,
                       onTap: () {
                         setState(() {
                           selectedCustomer = customer['name'];
                         });
+                        _fetchBalance(customer['name']);
                       },
                     );
                   },
@@ -172,7 +213,7 @@ class _CashInScreenState extends State<CashInScreen> {
                 keyboardType: TextInputType.number,
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
-                  hintText: "Enter cash-in amount",
+                  hintText: "وصول رقم درج کریں۔",
                   hintStyle: const TextStyle(color: Colors.white),
                   filled: true,
                   fillColor: AppColors.secondaryColor.withOpacity(0.2),
@@ -227,7 +268,7 @@ class _CashInScreenState extends State<CashInScreen> {
               ElevatedButton.icon(
                 icon: const Icon(Icons.attach_money, color: Colors.white),
                 label: const Text(
-                  "Process Cash-In",
+                  "Process Income وصول",
                   style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
                 onPressed: () async {
@@ -243,10 +284,25 @@ class _CashInScreenState extends State<CashInScreen> {
                     );
                     return;
                   }
+
                   final amount = int.tryParse(amountController.text) ?? 0;
+
                   if (amount <= 0) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Enter a valid amount")),
+                    );
+                    return;
+                  }
+
+                  // Check if the last digit is zero
+                  if (amount % 10 != 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "براہ کرم رقم چیک کریں۔ آخری ہندسہ صفر ہونا ضروری ہے۔",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
                     );
                     return;
                   }
@@ -259,6 +315,7 @@ class _CashInScreenState extends State<CashInScreen> {
                     'subtype': selectedSubtype,
                     'date': DateTime.now().toIso8601String(),
                   });
+                  _fetchBalance(selectedCustomer!);
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -269,21 +326,20 @@ class _CashInScreenState extends State<CashInScreen> {
 
                   setState(() {
                     customerSearchController.clear();
-                    amountController.clear(); // Clear amount input
-                    selectedCustomer = null; // Reset selected customer
-                    selectedSubtype = 'Cash'; // Reset subtype
+                    amountController.clear();
+                    selectedCustomer = null;
+                    selectedSubtype = 'Cash';
                   });
                 },
-
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondaryColor,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
+
             ],
           ),
         ),
