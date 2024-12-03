@@ -1,7 +1,10 @@
 import 'package:customer_manager/consts/app_colors.dart';
+import 'package:customer_manager/screens/lock_screen.dart';
+import 'package:customer_manager/screens/today_entry_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
+import '../main.dart';
 import 'add_customer.dart';
 import 'all_customers.dart';
 import 'cashIn.dart';
@@ -15,7 +18,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
   int totalCashIn = 0;
   int totalCashOut = 0;
   int balance = 0;
@@ -26,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchTotalsForDate(DateTime.now());
+    _fetchTotalsForDate(selectedDate ?? DateTime.now());
   }
 
   Future<void> _fetchTotalsForDate(DateTime date) async {
@@ -38,7 +41,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (record.containsKey('date')) {
         try {
           DateTime recordDate = DateTime.parse(record['date'] as String);
-
 
           if (recordDate.year == date.year &&
               recordDate.month == date.month &&
@@ -92,44 +94,30 @@ class _HomeScreenState extends State<HomeScreen> {
       await _fetchTotalsForDate(picked);
     }
   }
-  // Future<void> _clearAllData() async {
-  //   final shouldDelete = await showDialog<bool>(
-  //     context: context,
-  //     builder: (context) => AlertDialog(
-  //       title: const Text("Confirm Delete"),
-  //       content: const Text(
-  //           "Are you sure you want to clear all data? This action cannot be undone."),
-  //       actions: [
-  //         TextButton(
-  //           onPressed: () => Navigator.of(context).pop(false),
-  //           child: const Text("Cancel"),
-  //         ),
-  //         ElevatedButton(
-  //           onPressed: () => Navigator.of(context).pop(true),
-  //           child: const Text("Delete"),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  //
-  //   if (shouldDelete == true) {
-  //     await Hive.box<Map>('customers').clear();
-  //     await Hive.box<Map>('cashHistory').clear();
-  //     await Hive.box<Map>('userCredentials').clear();
-  //     setState(() {
-  //       totalCashIn = 0;
-  //       totalCashOut = 0;
-  //       balance = 0;
-  //     });
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text("All data has been cleared.")),
-  //     );
-  //   }
-  // }
+
+  void didPopNext() {
+    // This method will be triggered when returning to this screen.
+    _fetchTotalsForDate(selectedDate ?? DateTime.now());
+    super.didPopNext();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Subscribe to the RouteObserver
+    MyApp.routeObserver
+        .subscribe(this, ModalRoute.of(context) as PageRoute<dynamic>);
+  }
+
+  @override
+  void dispose() {
+    // Unsubscribe from the RouteObserver
+    MyApp.routeObserver.unsubscribe(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-
     final currentDate = selectedDate ?? DateTime.now();
 
     return Scaffold(
@@ -148,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -159,10 +147,31 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.logout, color: Colors.white),
+                        label: const Text(
+                          "Logout",
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const LockScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.secondaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       TextButton.icon(
                         onPressed: _selectDate,
@@ -172,19 +181,27 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
+                      IconButton(
+                        onPressed: () {
+                          _fetchTotalsForDate(selectedDate ?? DateTime.now());
+                        },
+                        icon: const Icon(Icons.refresh,color: Colors.white,),
+                      )
                     ],
                   ),
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildSummaryCard(" وصول", "$totalCashIn", AppColors.secondaryColor),
+                      _buildSummaryCard(
+                          " وصول", "$totalCashIn", AppColors.secondaryColor),
                       _buildSummaryCard(
                         " بقایا",
                         "$balance",
                         balance >= 0 ? Colors.green : Colors.yellow,
                       ),
-                      _buildSummaryCard(" مال/بل", "$totalCashOut", Colors.redAccent),
+                      _buildSummaryCard(
+                          " مال/بل", "$totalCashOut", Colors.redAccent),
                     ],
                   ),
                   const SizedBox(height: 60),
@@ -284,6 +301,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ),
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.white),
+                  title: const Text(
+                    "Today Entries",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TodayEntriesScreen(),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -305,7 +337,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             title,
-            style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: color, fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
@@ -321,7 +354,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActionButton(BuildContext context, String title, Widget screen, Color color, Color foreground) {
+  Widget _buildActionButton(BuildContext context, String title, Widget screen,
+      Color color, Color foreground) {
     return ElevatedButton(
       onPressed: () async {
         final result = await Navigator.push(

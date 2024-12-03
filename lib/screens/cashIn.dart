@@ -9,9 +9,13 @@ class CashInScreen extends StatefulWidget {
   State<CashInScreen> createState() => _CashInScreenState();
 }
 
+
 class _CashInScreenState extends State<CashInScreen> {
   final TextEditingController customerSearchController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
+  final FocusNode searchFocusNode = FocusNode();
+  final FocusNode amountFocusNode = FocusNode();
+
   int balance = 0;
   List<Map> customers = [];
   List<Map> filteredCustomers = [];
@@ -22,6 +26,9 @@ class _CashInScreenState extends State<CashInScreen> {
   void initState() {
     super.initState();
     _fetchCustomers();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(searchFocusNode);
+    });
   }
 
   Future<void> _fetchCustomers() async {
@@ -47,6 +54,7 @@ class _CashInScreenState extends State<CashInScreen> {
       }
     });
   }
+
   Future<void> _fetchBalance(String customerName) async {
     final cashHistoryBox = Hive.isBoxOpen('cashHistory')
         ? Hive.box<Map>('cashHistory')
@@ -122,18 +130,11 @@ class _CashInScreenState extends State<CashInScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                " وصول",
-                style: TextStyle(
-                  color: AppColors.secondaryColor,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
               TextField(
                 controller: customerSearchController,
+                focusNode: searchFocusNode,
                 onChanged: _filterCustomers,
+                autofocus: true,
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
                   hintText: "کسٹمر تلاش کریں۔",
@@ -162,14 +163,12 @@ class _CashInScreenState extends State<CashInScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 5),
                       Text(
                         " بقایا : $balance",
                         style: TextStyle(
                             color: balance >= 0 ? Colors.green : Colors.red,
                             fontSize: 18,
-                            fontWeight: FontWeight.bold
-                        ),
+                            fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -202,6 +201,7 @@ class _CashInScreenState extends State<CashInScreen> {
                           selectedCustomer = customer['name'];
                         });
                         _fetchBalance(customer['name']);
+                        FocusScope.of(context).requestFocus(amountFocusNode);
                       },
                     );
                   },
@@ -210,6 +210,7 @@ class _CashInScreenState extends State<CashInScreen> {
               const SizedBox(height: 20),
               TextField(
                 controller: amountController,
+                focusNode: amountFocusNode,
                 keyboardType: TextInputType.number,
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
@@ -224,7 +225,7 @@ class _CashInScreenState extends State<CashInScreen> {
                 ),
                 style: const TextStyle(color: Colors.white),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -258,8 +259,8 @@ class _CashInScreenState extends State<CashInScreen> {
                     ),
                     child:  Text(
                       selectedSubtype != "Cash"
-                        ? selectedSubtype
-                        : "Other",
+                          ? selectedSubtype
+                          : "Other",
                     ),
                   ),
                 ],
@@ -294,19 +295,6 @@ class _CashInScreenState extends State<CashInScreen> {
                     return;
                   }
 
-                  // Check if the last digit is zero
-                  if (amount % 10 != 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "براہ کرم رقم چیک کریں۔ آخری ہندسہ صفر ہونا ضروری ہے۔",
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-
                   final historyBox = Hive.box<Map>('cashHistory');
                   await historyBox.add({
                     'name': selectedCustomer,
@@ -320,26 +308,25 @@ class _CashInScreenState extends State<CashInScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                          "Cash-In of $amount added for $selectedCustomer (Subtype: $selectedSubtype)!"),
+                          "Cash-In of $amount added for $selectedCustomer!"),
                     ),
                   );
 
                   setState(() {
-                    customerSearchController.clear();
                     amountController.clear();
-                    selectedCustomer = null;
-                    selectedSubtype = 'Cash';
+                    customerSearchController.clear();
+                    FocusScope.of(context).requestFocus(searchFocusNode);
                   });
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondaryColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
-
             ],
           ),
         ),
@@ -347,3 +334,4 @@ class _CashInScreenState extends State<CashInScreen> {
     );
   }
 }
+

@@ -11,8 +11,11 @@ class CashOutScreen extends StatefulWidget {
 
 class _CashOutScreenState extends State<CashOutScreen> {
   final TextEditingController customerSearchController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController amountController = TextEditingController();
+
+  final FocusNode searchFocusNode = FocusNode();
+  final FocusNode amountFocusNode = FocusNode();
 
   List<Map> customers = [];
   List<Map> filteredCustomers = [];
@@ -24,6 +27,11 @@ class _CashOutScreenState extends State<CashOutScreen> {
   void initState() {
     super.initState();
     _fetchCustomers();
+
+    // Set initial focus to the search field when the screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(searchFocusNode);
+    });
   }
 
   Future<void> _fetchCustomers() async {
@@ -64,7 +72,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
       } else {
         filteredCustomers = customers
             .where((customer) =>
-                customer['name'].toLowerCase().contains(query.toLowerCase()))
+            customer['name'].toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
@@ -152,6 +160,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
       'subtype': selectedSubtype,
       'date': DateTime.now().toIso8601String(),
     });
+    _fetchBalance(selectedCustomer!);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -160,9 +169,12 @@ class _CashOutScreenState extends State<CashOutScreen> {
       ),
     );
 
-    // Clear the input and reload balance
-    amountController.clear();
-    await _fetchBalance(selectedCustomer!);
+    // Clear the input, reload balance, and shift focus back to search field
+    setState(() {
+      amountController.clear();
+      customerSearchController.clear();
+      FocusScope.of(context).requestFocus(searchFocusNode);
+    });
   }
 
   @override
@@ -180,18 +192,11 @@ class _CashOutScreenState extends State<CashOutScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                " مال/بل",
-                style: TextStyle(
-                  color: AppColors.secondaryColor,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 20),
               TextField(
                 controller: customerSearchController,
+                focusNode: searchFocusNode,
                 onChanged: _filterCustomers,
+                autofocus: true,
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
                   hintText: "کسٹمر تلاش کریں۔",
@@ -208,30 +213,27 @@ class _CashOutScreenState extends State<CashOutScreen> {
               const SizedBox(height: 10),
               selectedCustomer != null
                   ? Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Selected: $selectedCustomer",
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            " بقایا : $balance",
-                            style: TextStyle(
-                                color: balance >= 0 ? Colors.green : Colors.red,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Selected: $selectedCustomer",
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      " بقایا : $balance",
+                      style: TextStyle(
+                          color: balance >= 0 ? Colors.green : Colors.red,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              )
                   : const SizedBox(),
               const SizedBox(height: 10),
               SizedBox(
@@ -249,7 +251,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
                               ? AppColors.secondaryColor
                               : Colors.white,
                           fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       tileColor: isSelected
@@ -260,6 +262,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
                           selectedCustomer = customer['name'];
                         });
                         _fetchBalance(customer['name']);
+                        FocusScope.of(context).requestFocus(amountFocusNode);
                       },
                     );
                   },
@@ -268,6 +271,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
               const SizedBox(height: 20),
               TextField(
                 controller: amountController,
+                focusNode: amountFocusNode,
                 keyboardType: TextInputType.number,
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
@@ -330,7 +334,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondaryColor,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                  const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),

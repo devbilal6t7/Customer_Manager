@@ -76,6 +76,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     final pdf = pw.Document();
 
+    // Calculate running balance for each transaction
+    int runningBalance = 0;
+    final transactionsWithBalance = historyList.map((record) {
+      final cashIn = record['cash_in'] ?? 0;
+      final cashOut = record['cash_out'] ?? 0;
+      runningBalance = cashIn - cashOut;
+      return {
+        'date': record['date'],
+        'cash_in': cashIn,
+        'cash_out': cashOut,
+        'subtype': record['subtype'] ?? 'Cash',
+        'balance': runningBalance,
+      };
+    }).toList();
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -93,13 +108,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
               pw.Text("Transaction Details:"),
               pw.SizedBox(height: 8),
               pw.Table.fromTextArray(
-                headers: ['Date', 'CashIn', 'CashOut', 'Subtype'],
-                data: historyList.map((record) {
+                headers: ['Date', 'CashIn', 'CashOut', 'Subtype', 'Balance'],
+                data: transactionsWithBalance.map((record) {
                   return [
                     _formatDate(record['date']),
                     record['cash_in'].toString(),
                     record['cash_out'].toString(),
-                    record['subtype'] ?? 'Cash',
+                    record['subtype'],
+                    record['balance'].toString(),
                   ];
                 }).toList(),
               ),
@@ -113,6 +129,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       onLayout: (PdfPageFormat format) async => pdf.save(),
     );
   }
+
 
   Future<void> _exportDatabase() async {
     try {
@@ -346,7 +363,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 const SizedBox(width: 10,),
                                 Text(
                                   " || بقایا : $balance ",
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     color: Colors.yellow,
                                   ),
                                 ),

@@ -24,13 +24,14 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
+  static final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
+      navigatorObservers: [routeObserver],
       debugShowCheckedModeBanner: false,
       title: 'Customer Manager',
-      home: LockScreen(),
+      home: const LockScreen(),
     );
   }
 }

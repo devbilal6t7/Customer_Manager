@@ -67,6 +67,8 @@ class _AllCustomersState extends State<AllCustomers> {
   void _showEditDialog(Map customer) {
     final TextEditingController nameController =
     TextEditingController(text: customer['name']);
+    final TextEditingController numberController =
+    TextEditingController(text: customer['number']);
 
     showDialog(
       context: context,
@@ -74,32 +76,59 @@ class _AllCustomersState extends State<AllCustomers> {
         return AlertDialog(
           backgroundColor: AppColors.mainColor.withOpacity(0.9),
           title: Text(
-            "Edit Customer Name",
+            "Edit Customer Details",
             style: TextStyle(
               color: AppColors.secondaryColor,
               fontWeight: FontWeight.bold,
             ),
           ),
-          content: TextField(
-            controller: nameController,
-            style: TextStyle(color: AppColors.secondaryColor),
-            cursorColor: AppColors.secondaryColor,
-            decoration: InputDecoration(
-              labelText: "Customer Name",
-              labelStyle: TextStyle(color: AppColors.secondaryColor),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.secondaryColor),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                style: TextStyle(color: AppColors.secondaryColor),
+                cursorColor: AppColors.secondaryColor,
+                decoration: InputDecoration(
+                  labelText: "Customer Name",
+                  labelStyle: TextStyle(color: AppColors.secondaryColor),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.secondaryColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.secondaryColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.secondaryColor),
+                  ),
+                ),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.secondaryColor),
+              const SizedBox(height: 10),
+              TextField(
+                controller: numberController,
+                style: TextStyle(color: AppColors.secondaryColor),
+                cursorColor: AppColors.secondaryColor,
+                decoration: InputDecoration(
+                  labelText: "Customer Number",
+                  labelStyle: TextStyle(color: AppColors.secondaryColor),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.secondaryColor),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.secondaryColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.secondaryColor),
+                  ),
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: AppColors.secondaryColor),
-              ),
-            ),
+            ],
           ),
           actions: [
             TextButton(
@@ -118,9 +147,14 @@ class _AllCustomersState extends State<AllCustomers> {
               ),
               onPressed: () async {
                 final newName = nameController.text.trim();
-                if (newName.isNotEmpty) {
-                  await HiveDatabaseHelper().updateCustomerName(
-                      customer['name'], newName);
+                final newNumber = numberController.text.trim();
+
+                if (newName.isNotEmpty && newNumber.isNotEmpty) {
+                  await HiveDatabaseHelper().updateCustomerDetails(
+                    oldName: customer['name'],
+                    newName: newName,
+                    newNumber: newNumber,
+                  );
                   await _fetchCustomers();
                   Navigator.of(context).pop();
                 }
@@ -138,6 +172,7 @@ class _AllCustomersState extends State<AllCustomers> {
       },
     );
   }
+
 
 
   @override
