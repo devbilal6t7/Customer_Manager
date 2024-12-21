@@ -4,11 +4,13 @@ import 'package:customer_manager/screens/today_entry_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
+import '../databases/database.dart';
 import '../main.dart';
 import 'add_customer.dart';
 import 'all_customers.dart';
 import 'cashIn.dart';
 import 'cashOut.dart';
+import 'defaulter_list_screen.dart';
 import 'history.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -316,6 +318,16 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     );
                   },
                 ),
+                ListTile(
+                  leading: const Icon(Icons.disabled_by_default_outlined, color: Colors.white),
+                  title: const Text(
+                    "Defaulter List",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: (){
+                    navigateToDefaulterList(context);
+                  },
+                ),
               ],
             ),
           ),
@@ -380,4 +392,14 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       ),
     );
   }
+  void navigateToDefaulterList(BuildContext context) {
+    final defaultersFuture = HiveDatabaseHelper().getDefaulters();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DefaulterListScreen(defaultersFuture: defaultersFuture),
+      ),
+    );
+  }
+
 }

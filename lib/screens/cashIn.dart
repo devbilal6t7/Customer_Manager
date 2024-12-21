@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../consts/app_colors.dart';
+import '../databases/database.dart';
 
 class CashInScreen extends StatefulWidget {
   const CashInScreen({super.key});
@@ -77,36 +78,191 @@ class _CashInScreenState extends State<CashInScreen> {
 
   void _showSubtypeOptions() {
     showModalBottomSheet(
+      backgroundColor: AppColors.mainColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+      ),
       context: context,
       builder: (BuildContext context) {
         return ListView(
           shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 10),
           children: [
             ListTile(
-              title: const Text("Concession"),
+              title: const Text(
+                "Concession",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("Concession"),
             ),
             ListTile(
-              title: const Text("JazzCash/EasyPaisa"),
+              title: const Text(
+                "JazzCash/EasyPaisa",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("JazzCash/EasyPaisa"),
             ),
             ListTile(
-              title: const Text("Check"),
+              title: const Text(
+                "Check",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("Check"),
             ),
             ListTile(
-              title: const Text("Amanat"),
+              title: const Text(
+                "Amanat",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("Amanat"),
             ),
             ListTile(
-              title: const Text("By Other Bank"),
+              title: const Text(
+                "By Other Bank",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("By Other Bank"),
+            ),
+            ListTile(
+              title: const Text(
+                "Other",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              leading: Icon(
+                Icons.add,
+                color: AppColors.secondaryColor,
+              ),
+              tileColor: AppColors.secondaryColor.withOpacity(0.2),
+              onTap: () {
+                Navigator.pop(context); // Close the modal
+                _showCustomSubtypeDialog();
+              },
             ),
           ],
         );
       },
     );
   }
+
+  void _showCustomSubtypeDialog() {
+    final TextEditingController customSubtypeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.mainColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Center(
+            child: Text(
+              "تفصیل درج کریں",
+              style: TextStyle(
+                color: AppColors.secondaryColor,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          content: TextField(
+            controller: customSubtypeController,
+            cursorColor: AppColors.secondaryColor,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: "اپنی تفصیل ٹائپ کریں۔",
+              hintStyle: const TextStyle(color: Colors.white70),
+              filled: true,
+              fillColor: AppColors.mainColor.withOpacity(0.5),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                  color: AppColors.secondaryColor,
+                  width: 1,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                  color: AppColors.secondaryColor,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+              },
+              child: Text(
+                "Cancel",
+                style: TextStyle(
+                  color: AppColors.secondaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final customSubtype = customSubtypeController.text.trim();
+                if (customSubtype.isNotEmpty) {
+                  setState(() {
+                    selectedSubtype = customSubtype; // Update the selected subtype
+                  });
+
+                  // Save the subtype in the database
+                  await HiveDatabaseHelper().saveCustomSubtype(customSubtype);
+
+                  Navigator.pop(context); // Close the dialog
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                "Save",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   void _selectSubtype(String subtype) {
     setState(() {

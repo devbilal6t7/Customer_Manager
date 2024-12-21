@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -74,6 +75,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return;
     }
 
+    // Load Urdu font
+    final urduFont = pw.Font.ttf(await rootBundle.load("assets/fonts/Jameel Khushkhat-L Regular.ttf"));
+
     final pdf = pw.Document();
 
     // Calculate running balance for each transaction
@@ -81,54 +85,127 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final transactionsWithBalance = historyList.map((record) {
       final cashIn = record['cash_in'] ?? 0;
       final cashOut = record['cash_out'] ?? 0;
-      runningBalance = cashIn - cashOut;
+      runningBalance += ((cashOut - cashIn) as num).toInt();
       return {
         'date': record['date'],
         'cash_in': cashIn,
         'cash_out': cashOut,
-        'subtype': record['subtype'] ?? 'Cash',
+        'subtype': record['subtype'] ?? 'نقد',
         'balance': runningBalance,
       };
     }).toList();
 
+    // Create PDF page
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                "Customer Transaction Report",
-                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 16),
-              pw.Text("Customer Name: $selectedCustomer"),
-              pw.SizedBox(height: 16),
-              pw.Text("Transaction Details:"),
-              pw.SizedBox(height: 8),
-              pw.Table.fromTextArray(
-                headers: ['Date', 'CashIn', 'CashOut', 'Subtype', 'Balance'],
-                data: transactionsWithBalance.map((record) {
-                  return [
-                    _formatDate(record['date']),
-                    record['cash_in'].toString(),
-                    record['cash_out'].toString(),
-                    record['subtype'],
-                    record['balance'].toString(),
-                  ];
-                }).toList(),
-              ),
-            ],
+          return pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Text(
+                  "گاہک کا لین دین کی رپورٹ",
+                  style: pw.TextStyle(
+                    font: urduFont,
+                    fontSize: 24,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 8),
+
+                // Customer Name
+                pw.Text(
+                  "نام: $selectedCustomer",
+                  style: pw.TextStyle(font: urduFont, fontSize: 16),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 16),
+
+                // Transactions Table
+                pw.Table(
+                  border: pw.TableBorder.all(width: 0.5), // Clean borders
+                  columnWidths: {
+                    0: const pw.FixedColumnWidth(100), // Date
+                    1: const pw.FixedColumnWidth(70),  // Debit
+                    2: const pw.FixedColumnWidth(70),  // Credit
+                    3: const pw.FixedColumnWidth(100), // Description
+                    4: const pw.FixedColumnWidth(100), // Balance
+                  },
+                  children: [
+                    // Table Header
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColors.grey300),
+                      children: [
+                        _buildTableHeader('تاریخ', urduFont),
+                        _buildTableHeader('بل', urduFont),
+                        _buildTableHeader('وصول', urduFont),
+                        _buildTableHeader('تفصیل', urduFont),
+                        _buildTableHeader('بقایا', urduFont),
+                      ],
+                    ),
+                    // Table Rows
+                    ...transactionsWithBalance.map((record) {
+                      return pw.TableRow(
+                        children: [
+                          _buildTableCell(_formatDate(record['date']), urduFont),
+                          _buildTableCell(record['cash_out'].toString(), urduFont),
+                          _buildTableCell(record['cash_in'].toString(), urduFont),
+                          _buildTableCell(record['subtype'], urduFont),
+                          _buildTableCell(record['balance'].toString(), urduFont),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ],
+            ),
           );
         },
       ),
     );
 
+    // Save and Print PDF
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
     );
   }
+
+// Helper Function to Build Table Header
+  pw.Widget _buildTableHeader(String text, pw.Font font) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(8),
+      child: pw.Text(
+        text,
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(font: font, fontSize: 14, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+  }
+
+// Helper Function to Build Table Cell
+  pw.Widget _buildTableCell(String text, pw.Font font) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(8),
+      child: pw.Text(
+        text,
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(font: font, fontSize: 12),
+      ),
+    );
+  }
+
+// Helper Function to Format Dates
+  String _formatDate(String date) {
+    final parsedDate = DateTime.parse(date);
+    return "${parsedDate.day}-${parsedDate.month}-${parsedDate.year}";
+  }
+
+
+
+
 
 
   Future<void> _exportDatabase() async {
@@ -224,14 +301,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  String _formatDate(String dateTimeString) {
-    try {
-      final dateTime = DateTime.parse(dateTimeString);
-      return DateFormat('yyyy-MM-dd').format(dateTime);
-    } catch (e) {
-      return dateTimeString;
-    }
-  }
+  // String _formatDate(String dateTimeString) {
+  //   try {
+  //     final dateTime = DateTime.parse(dateTimeString);
+  //     return DateFormat('yyyy-MM-dd').format(dateTime);
+  //   } catch (e) {
+  //     return dateTimeString;
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
