@@ -11,7 +11,7 @@ class CashOutScreen extends StatefulWidget {
 
 class _CashOutScreenState extends State<CashOutScreen> {
   final TextEditingController customerSearchController =
-  TextEditingController();
+      TextEditingController();
   final TextEditingController amountController = TextEditingController();
 
   final FocusNode searchFocusNode = FocusNode();
@@ -72,7 +72,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
       } else {
         filteredCustomers = customers
             .where((customer) =>
-            customer['name'].toLowerCase().contains(query.toLowerCase()))
+                customer['name'].toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
@@ -80,30 +80,144 @@ class _CashOutScreenState extends State<CashOutScreen> {
 
   void _showSubtypeOptions() {
     showModalBottomSheet(
+      backgroundColor: AppColors.mainColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+      ),
       context: context,
       builder: (BuildContext context) {
         return ListView(
           shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(vertical: 10),
           children: [
+            // Predefined subtypes
             ListTile(
-              title: const Text("Concession"),
+              title: const Text("Concession",
+                  style: TextStyle(color: Colors.white)),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("Concession"),
             ),
             ListTile(
-              title: const Text("JazzCash/EasyPaisa"),
+              title: const Text("JazzCash/EasyPaisa",
+                  style: TextStyle(color: Colors.white)),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("JazzCash/EasyPaisa"),
             ),
             ListTile(
-              title: const Text("Check"),
+              title: const Text("Check", style: TextStyle(color: Colors.white)),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("Check"),
             ),
             ListTile(
-              title: const Text("Amanat"),
+              title:
+                  const Text("Amanat", style: TextStyle(color: Colors.white)),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("Amanat"),
             ),
             ListTile(
-              title: const Text("By Other Bank"),
+              title: const Text("By Other Bank",
+                  style: TextStyle(color: Colors.white)),
+              tileColor: AppColors.mainColor.withOpacity(0.5),
               onTap: () => _selectSubtype("By Other Bank"),
+            ),
+            // "Other" subtype tile
+            ListTile(
+              title: const Text(
+                "Other",
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              leading: Icon(Icons.add, color: AppColors.secondaryColor),
+              tileColor: AppColors.secondaryColor.withOpacity(0.2),
+              onTap: () {
+                Navigator.pop(context); // Close the modal
+                _showCustomSubtypeDialog(); // Open dialog for custom subtype
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCustomSubtypeDialog() {
+    final TextEditingController customSubtypeController =
+        TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.mainColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: Center(
+            child: Text(
+              "تفصیل درج کریں",
+              style: TextStyle(
+                color: AppColors.secondaryColor,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'JameelNooriNastaleeqKasheeda',
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+          content: TextField(
+            controller: customSubtypeController,
+            cursorColor: AppColors.secondaryColor,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: "اپنی تفصیل ٹائپ کریں۔",
+              hintStyle: const TextStyle(
+                  color: Colors.white70,
+                  fontFamily: 'JameelNooriNastaleeqKasheeda',
+                  letterSpacing: 2),
+              filled: true,
+              fillColor: AppColors.mainColor.withOpacity(0.5),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    BorderSide(color: AppColors.secondaryColor, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    BorderSide(color: AppColors.secondaryColor, width: 2),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+              },
+              child: Text(
+                "Cancel",
+                style: TextStyle(
+                  color: AppColors.secondaryColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final customSubtype = customSubtypeController.text.trim();
+                if (customSubtype.isNotEmpty) {
+                  setState(() {
+                    selectedSubtype = customSubtype; // Update selected subtype
+                  });
+                  Navigator.pop(context); // Close dialog
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.secondaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text("Save", style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -145,7 +259,10 @@ class _CashOutScreenState extends State<CashOutScreen> {
         const SnackBar(
           content: Text(
             "براہ کرم رقم چیک کریں۔ آخری ہندسہ صفر ہونا ضروری ہے۔",
-            style: TextStyle(fontSize: 16),
+            style: TextStyle(
+                fontSize: 16,
+                fontFamily: 'JameelNooriNastaleeqKasheeda',
+                letterSpacing: 2),
           ),
         ),
       );
@@ -182,7 +299,12 @@ class _CashOutScreenState extends State<CashOutScreen> {
     return Scaffold(
       backgroundColor: AppColors.mainColor,
       appBar: AppBar(
-        title: const Text(" مال/بل"),
+        title: const Text(
+          " مال/بل",
+          style: TextStyle(
+            fontFamily: 'JameelNooriNastaleeqKasheeda',
+          ),
+        ),
         backgroundColor: AppColors.secondaryColor,
         foregroundColor: Colors.white,
       ),
@@ -200,7 +322,10 @@ class _CashOutScreenState extends State<CashOutScreen> {
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
                   hintText: "کسٹمر تلاش کریں۔",
-                  hintStyle: const TextStyle(color: Colors.white),
+                  hintStyle: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'JameelNooriNastaleeqKasheeda',
+                      letterSpacing: 2),
                   filled: true,
                   fillColor: AppColors.secondaryColor.withOpacity(0.2),
                   border: OutlineInputBorder(
@@ -213,27 +338,29 @@ class _CashOutScreenState extends State<CashOutScreen> {
               const SizedBox(height: 10),
               selectedCustomer != null
                   ? Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Selected: $selectedCustomer",
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      " بقایا : $balance",
-                      style: TextStyle(
-                          color: balance >= 0 ? Colors.green : Colors.red,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              )
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Selected: $selectedCustomer",
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            "   بقایا :     $balance",
+                            style: TextStyle(
+                                letterSpacing: 2,
+                                fontFamily: 'JameelNooriNastaleeqKasheeda',
+                                color: balance >= 0 ? Colors.green : Colors.red,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    )
                   : const SizedBox(),
               const SizedBox(height: 10),
               SizedBox(
@@ -251,7 +378,7 @@ class _CashOutScreenState extends State<CashOutScreen> {
                               ? AppColors.secondaryColor
                               : Colors.white,
                           fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       tileColor: isSelected
@@ -276,7 +403,11 @@ class _CashOutScreenState extends State<CashOutScreen> {
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
                   hintText: "  مال/بل کی رقم درج کریں۔ ",
-                  hintStyle: const TextStyle(color: Colors.white),
+                  hintStyle: const TextStyle(
+                    color: Colors.white,
+                    letterSpacing: 2,
+                    fontFamily: 'JameelNooriNastaleeqKasheeda',
+                  ),
                   filled: true,
                   fillColor: AppColors.secondaryColor.withOpacity(0.2),
                   border: OutlineInputBorder(
@@ -297,10 +428,10 @@ class _CashOutScreenState extends State<CashOutScreen> {
                       });
                     },
                     style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(5),
                       ),
+                      foregroundColor: Colors.white,
                       backgroundColor: selectedSubtype == "Cash"
                           ? Colors.green
                           : AppColors.secondaryColor,
@@ -310,10 +441,10 @@ class _CashOutScreenState extends State<CashOutScreen> {
                   ElevatedButton(
                     onPressed: _showSubtypeOptions,
                     style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(5),
                       ),
+                      foregroundColor: Colors.white,
                       backgroundColor: selectedSubtype != "Cash"
                           ? Colors.green
                           : AppColors.secondaryColor,
@@ -328,13 +459,18 @@ class _CashOutScreenState extends State<CashOutScreen> {
                 icon: const Icon(Icons.attach_money, color: Colors.white),
                 label: const Text(
                   "Process مال/بل",
-                  style: TextStyle(color: Colors.white, fontSize: 18),
+                  style: TextStyle(
+                    letterSpacing: 2,
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontFamily: 'JameelNooriNastaleeqKasheeda',
+                  ),
                 ),
                 onPressed: _processCashOut,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondaryColor,
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),

@@ -8,7 +8,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../consts/app_colors.dart';
-import 'package:intl/intl.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -19,12 +18,20 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen> {
   final TextEditingController customerSearchController = TextEditingController();
+  final TextEditingController fromDateController = TextEditingController();
+  final TextEditingController toDateController = TextEditingController();
 
   String? selectedCustomer;
+  DateTime? fromDate;
+  DateTime? toDate;
   List<Map> customers = [];
   List<Map> filteredCustomers = [];
   List<Map> historyList = [];
-
+  List<Map> transactionsWithBalance = [];
+  int totalCashIn = 0;
+  int totalCashOut = 0;
+  int runningBalance = 0;
+ int? selectedCustomerIndex;
   @override
   void initState() {
     super.initState();
@@ -42,16 +49,67 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
   }
 
-  Future<void> _fetchHistory(String customerName) async {
+  Future<void> _fetchHistory(String customerName, {DateTime? from, DateTime? to}) async {
     final historyBox = Hive.isBoxOpen('cashHistory')
         ? Hive.box<Map>('cashHistory')
         : await Hive.openBox<Map>('cashHistory');
 
     setState(() {
       historyList = historyBox.values
-          .where((entry) => entry['name'] == customerName)
-          .toList();
+          .where((entry) {
+        final entryDate = DateTime.tryParse(entry['date']);
+        if (entryDate == null) return false; // Skip invalid dates
+
+        // If dates are not provided, fetch all history
+        if (from == null && to == null) {
+          return entry['name'] == customerName;
+        }
+
+        // Otherwise, filter based on date range
+        final withinFrom = from == null || entryDate.isAfter(from.subtract(const Duration(days: 1)));
+        final withinTo = to == null || entryDate.isBefore(to.add(const Duration(days: 1)));
+        return entry['name'] == customerName && withinFrom && withinTo;
+      }).toList();
+
+      _calculateTransactionsWithBalance();
     });
+  }
+
+
+  void _calculateTransactionsWithBalance() {
+    totalCashIn = 0;
+    totalCashOut = 0;
+    runningBalance = 0;
+
+    transactionsWithBalance = historyList.map((record) {
+      final cashIn = record['cash_in'] ?? 0;
+      final cashOut = record['cash_out'] ?? 0;
+
+      // Update totals
+      totalCashIn += cashIn as int;
+      totalCashOut += cashOut as int;
+
+      // Calculate running balance
+      runningBalance += cashOut - cashIn;
+
+      return {
+        ...record,
+        'balance': runningBalance,
+      };
+    }).toList();
+  }
+
+  void _showDatePicker(TextEditingController controller, ValueChanged<DateTime?> onDateSelected) async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (selectedDate != null) {
+      controller.text = "${selectedDate.day}-${selectedDate.month}-${selectedDate.year}";
+      onDateSelected(selectedDate);
+    }
   }
 
   void _filterCustomers(String query) {
@@ -67,6 +125,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
     });
   }
 
+  Widget _buildTableHeader(String text) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontFamily: 'JameelNooriNastaleeqKasheeda',
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableCell(String text, {Color? textColor}) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 12,
+          color: textColor ?? Colors.white,
+
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(String date) {
+    final parsedDate = DateTime.parse(date);
+    return "${parsedDate.day}-${parsedDate.month}-${parsedDate.year}";
+  }
   Future<void> _exportData() async {
     if (selectedCustomer == null || historyList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,17 +168,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
       return;
     }
 
-    // Load Urdu font
-    final urduFont = pw.Font.ttf(await rootBundle.load("assets/fonts/Jameel Khushkhat-L Regular.ttf"));
-
+    final urduFont = pw.Font.ttf(await rootBundle.load("assets/fonts/JameelNooriNastaleeqKasheeda.ttf"));
     final pdf = pw.Document();
 
-    // Calculate running balance for each transaction
     int runningBalance = 0;
+    int totalCashIn = 0;
+    int totalCashOut = 0;
+    int totalBalance = 0; // NEW: To calculate sum of all balances
+
+    // Calculate transaction data and totals
     final transactionsWithBalance = historyList.map((record) {
       final cashIn = record['cash_in'] ?? 0;
       final cashOut = record['cash_out'] ?? 0;
-      runningBalance += ((cashOut - cashIn) as num).toInt();
+
+      // Update running balance for this transaction
+      runningBalance += (cashOut - cashIn as num).toInt();
+
+      // Add to totals
+      totalCashIn += (cashIn as num).toInt();
+      totalCashOut += (cashOut as num).toInt();
+      totalBalance += runningBalance; // Sum of all balance values
+
       return {
         'date': record['date'],
         'cash_in': cashIn,
@@ -95,7 +198,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
       };
     }).toList();
 
-    // Create PDF page
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -105,59 +207,62 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
+                // Title
                 pw.Text(
-                  "گاہک کا لین دین کی رپورٹ",
-                  style: pw.TextStyle(
-                    font: urduFont,
-                    fontSize: 24,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                  textAlign: pw.TextAlign.center,
+                  "Customer's Detailed History Report",
+                  style: pw.TextStyle(font: urduFont, fontSize: 24, fontWeight: pw.FontWeight.bold),
                 ),
                 pw.SizedBox(height: 8),
-
                 // Customer Name
-                pw.Text(
-                  "نام: $selectedCustomer",
-                  style: pw.TextStyle(font: urduFont, fontSize: 16),
-                  textAlign: pw.TextAlign.center,
-                ),
+                pw.Text("Name: $selectedCustomer", style: pw.TextStyle(font: urduFont, fontSize: 16)),
                 pw.SizedBox(height: 16),
-
-                // Transactions Table
+                // Table
                 pw.Table(
-                  border: pw.TableBorder.all(width: 0.5), // Clean borders
+                  border: pw.TableBorder.all(width: 0.5),
                   columnWidths: {
-                    0: const pw.FixedColumnWidth(100), // Date
-                    1: const pw.FixedColumnWidth(70),  // Debit
-                    2: const pw.FixedColumnWidth(70),  // Credit
-                    3: const pw.FixedColumnWidth(100), // Description
-                    4: const pw.FixedColumnWidth(100), // Balance
+                    0: const pw.FixedColumnWidth(100),
+                    1: const pw.FixedColumnWidth(70),
+                    2: const pw.FixedColumnWidth(70),
+                    3: const pw.FixedColumnWidth(100),
+                    4: const pw.FixedColumnWidth(100),
                   },
                   children: [
                     // Table Header
                     pw.TableRow(
                       decoration: pw.BoxDecoration(color: PdfColors.grey300),
                       children: [
-                        _buildTableHeader('تاریخ', urduFont),
-                        _buildTableHeader('بل', urduFont),
-                        _buildTableHeader('وصول', urduFont),
-                        _buildTableHeader('تفصیل', urduFont),
-                        _buildTableHeader('بقایا', urduFont),
+                        _buildTableCellPDF('Baqaya', urduFont),
+                        _buildTableCellPDF('Tafseel', urduFont),
+                        _buildTableCellPDF('Wasool', urduFont),
+                        _buildTableCellPDF('Bill', urduFont),
+                        _buildTableCellPDF('Date', urduFont),
+
                       ],
                     ),
-                    // Table Rows
+                    // Table Rows for Transactions
                     ...transactionsWithBalance.map((record) {
                       return pw.TableRow(
                         children: [
-                          _buildTableCell(_formatDate(record['date']), urduFont),
-                          _buildTableCell(record['cash_out'].toString(), urduFont),
-                          _buildTableCell(record['cash_in'].toString(), urduFont),
-                          _buildTableCell(record['subtype'], urduFont),
-                          _buildTableCell(record['balance'].toString(), urduFont),
+                          _buildTableCellPDF((record['balance'].toString()), urduFont),
+                          _buildTableCellPDF(record['subtype'].toString(), urduFont),
+                          _buildTableCellPDF(record['cash_in'].toString(), urduFont),
+                          _buildTableCellPDF(record['cash_out'].toString(), urduFont),
+                          _buildTableCellPDF(_formatDate(record['date']), urduFont),
                         ],
                       );
                     }).toList(),
+                    // Final Row for Totals
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColors.grey200),
+                      children: [
+                        _buildTableCellPDF(totalBalance.toString(), urduFont),
+                        _buildTableCellPDF("-", urduFont),// Total Label // Total Cash Out
+                        _buildTableCellPDF(totalCashIn.toString(), urduFont), // Total Cash In
+                        _buildTableCellPDF(totalCashOut.toString(), urduFont),
+                        _buildTableCellPDF("Total", urduFont),// Empty for Subtype
+                         // Sum of all balances
+                      ],
+                    ),
                   ],
                 ),
               ],
@@ -167,26 +272,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ),
     );
 
-    // Save and Print PDF
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-    );
-  }
-
-// Helper Function to Build Table Header
-  pw.Widget _buildTableHeader(String text, pw.Font font) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(8),
-      child: pw.Text(
-        text,
-        textAlign: pw.TextAlign.center,
-        style: pw.TextStyle(font: font, fontSize: 14, fontWeight: pw.FontWeight.bold),
-      ),
-    );
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
 
 // Helper Function to Build Table Cell
-  pw.Widget _buildTableCell(String text, pw.Font font) {
+  pw.Widget _buildTableCellPDF(String text, pw.Font font) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(8),
       child: pw.Text(
@@ -197,17 +287,259 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-// Helper Function to Format Dates
-  String _formatDate(String date) {
-    final parsedDate = DateTime.parse(date);
-    return "${parsedDate.day}-${parsedDate.month}-${parsedDate.year}";
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blueGrey[900],
+      body: Row(
+        children: [
+          _buildSidebar(),
+          Container(width: 2, color: Colors.white),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const SizedBox(width: 16),
+                      Center(
+                        child: Text(
+                          "Transaction History",
+                          style: TextStyle(
+                            color: AppColors.secondaryColor,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 50),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: fromDateController,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            prefix: const Text("From :   ", style: TextStyle(color: Colors.white)),
+                            suffixIcon: Icon(Icons.calendar_month, color: AppColors.white),
+                            hintText: "Select From Date",
+                            hintStyle: TextStyle(color: AppColors.secondaryColor),
+                            filled: true,
+                            fillColor: AppColors.mainColor.withOpacity(0.1),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          style: TextStyle(color: AppColors.secondaryColor),
+                          onTap: () => _showDatePicker(fromDateController, (date) {
+                            setState(() => fromDate = date);
+                            if (selectedCustomer != null && toDate != null) {
+                              _fetchHistory(selectedCustomer!, from: fromDate, to: toDate);
+                            }
+                          }),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: toDateController,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            prefix: const Text("To :   ", style: TextStyle(color: Colors.white)),
+                            suffixIcon: Icon(Icons.date_range, color: AppColors.white),
+                            hintText: "To Date",
+                            hintStyle: TextStyle(color: AppColors.secondaryColor),
+                            filled: true,
+                            fillColor: AppColors.mainColor.withOpacity(0.1),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          style: TextStyle(color: AppColors.secondaryColor),
+                          onTap: () => _showDatePicker(toDateController, (date) {
+                            setState(() => toDate = date);
+                            if (selectedCustomer != null && fromDate != null) {
+                              _fetchHistory(selectedCustomer!, from: fromDate, to: toDate);
+                            }
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: customerSearchController,
+                    onChanged: _filterCustomers,
+                    decoration: InputDecoration(
+                      hintText: "Search Customer",
+                      hintStyle: const TextStyle(color: Colors.white),
+                      filled: true,
+                      fillColor: Colors.grey[800],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      itemCount: filteredCustomers.length,
+                      itemBuilder: (context, index) {
+                        final customer = filteredCustomers[index];
+                        final isSelected = selectedCustomerIndex == index;
+
+                        return ListTile(
+                          leading: Text(
+                            '${index + 1}.',
+                            style: TextStyle(color: isSelected ? Colors.yellow : Colors.white),
+                          ),
+                          title: Text(
+                            customer['name'],
+                            style: TextStyle(color: isSelected ? Colors.yellow : Colors.white),
+                          ),
+                          tileColor: isSelected ? Colors.blueGrey[700] : Colors.transparent,
+                          onTap: () {
+                            setState(() {
+                              selectedCustomerIndex = index;
+                              selectedCustomer = customer['name'];
+                              fromDateController.clear();
+                              toDateController.clear();
+                              fromDate = null;
+                              toDate = null;
+                            });
+                            _fetchHistory(customer['name']);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  if (selectedCustomer != null)
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: SingleChildScrollView(
+                          child: Table(
+                            border: TableBorder.all(color: Colors.white, width: 1),
+                            columnWidths: const {
+                              0: FixedColumnWidth(100),
+                              1: FixedColumnWidth(80),
+                              2: FixedColumnWidth(80),
+                              3: FixedColumnWidth(100),
+                              4: FixedColumnWidth(80),
+                            },
+                            children: [
+                              TableRow(
+                                decoration: BoxDecoration(color: Colors.grey[800]),
+                                children: [
+                                  _buildTableHeader("بقایا"),
+                                  _buildTableHeader("تفصیل"),
+                                  _buildTableHeader("وصول"),
+                                  _buildTableHeader("بل"),
+                                  _buildTableHeader("تاریخ"),
+                                ],
+                              ),
+                              ...transactionsWithBalance.map((record) {
+                                return TableRow(
+                                  children: [
+                                    _buildTableCell(record['balance'].toString()), // Convert balance to String
+                                    _buildTableCell(record['subtype'] ?? 'نقد'),
+                                    _buildTableCell(record['cash_in'].toString()), // Convert cash_in to String
+                                    _buildTableCell(record['cash_out'].toString()), // Convert cash_out to String
+                                    _buildTableCell(_formatDate(record['date'])),
+                                  ],
+                                );
+                              }).toList(),
+                              TableRow(
+                                decoration: BoxDecoration(color: Colors.grey[800]),
+                                children: [
+                                  _buildTableCell(runningBalance.toString()),
+                                  _buildTableCell("-"),
+                                  _buildTableCell(totalCashIn.toString()),
+
+                                  _buildTableCell(totalCashOut.toString()),
+                                  _buildTableCell("ٹوٹل"),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
 
-
-
-
-
+  Widget _buildSidebar() {
+    return Container(
+      width: 250,
+      color: AppColors.secondaryColor.withOpacity(0.1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            height: 150,
+            color: AppColors.secondaryColor,
+            alignment: Alignment.center,
+            child: Text(
+              "Customer Manager",
+              style: TextStyle(
+                color: AppColors.mainColor,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.picture_as_pdf, color: Colors.white),
+            title: const Text(
+              "Export Data",
+              style: TextStyle(color: Colors.white),
+            ),
+            onTap: _exportData,
+          ),
+          ListTile(
+            leading: const Icon(Icons.file_download, color: Colors.white),
+            title: const Text(
+              "Export Database",
+              style: TextStyle(color: Colors.white),
+            ),
+            onTap: _exportDatabase,
+          ),
+          ListTile(
+            leading: const Icon(Icons.file_upload, color: Colors.white),
+            title: const Text(
+              "Import Database",
+              style: TextStyle(color: Colors.white),
+            ),
+            onTap: _importDatabase,
+          ),
+        ],
+      ),
+    );
+  }
   Future<void> _exportDatabase() async {
     try {
       final file = await FilePicker.platform.saveFile(
@@ -301,219 +633,5 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  // String _formatDate(String dateTimeString) {
-  //   try {
-  //     final dateTime = DateTime.parse(dateTimeString);
-  //     return DateFormat('yyyy-MM-dd').format(dateTime);
-  //   } catch (e) {
-  //     return dateTimeString;
-  //   }
-  // }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.mainColor,
-      body: Row(
-        children: [
-          _buildSidebar(),
-          Container(width: 2, color: Colors.white),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const SizedBox(width: 16),
-                      Center(
-                        child: Text(
-                          "Transaction History",
-                          style: TextStyle(
-                            color: AppColors.secondaryColor,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 50),
-                  TextField(
-                    controller: customerSearchController,
-                    onChanged: _filterCustomers,
-                    cursorColor: Colors.white,
-                    autofocus: true, // Enable autofocus
-                    decoration: InputDecoration(
-                      hintText: "Search Customer",
-                      hintStyle: const TextStyle(color: Colors.white),
-                      filled: true,
-                      fillColor: AppColors.secondaryColor.withOpacity(0.2),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 100,
-                    child: ListView.builder(
-                      itemCount: filteredCustomers.length,
-                      itemBuilder: (context, index) {
-                        final customer = filteredCustomers[index];
-                        return ListTile(
-                          title: Text(
-                            customer['name'],
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          // tileColor: AppColors.secondaryColor.withOpacity(0.2),
-                          onTap: () {
-                            setState(() {
-                              selectedCustomer = customer['name'];
-                            });
-                            _fetchHistory(customer['name']);
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  if (selectedCustomer != null)
-                    Text(
-                      "History for $selectedCustomer",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: historyList.isEmpty
-                        ? const Center(
-                      child: Text(
-                        "No transactions found.",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    )
-                        : ListView.builder(
-                      itemCount: historyList.length,
-                      itemBuilder: (context, index) {
-                        final record = historyList[index];
-                        final isCashIn =
-                        (record['cash_in'] != null && record['cash_in'] > 0);
-                        final subtitleText = isCashIn
-                            ? "وصول : ${record['cash_in']}"
-                            : "مال/بل : ${record['cash_out']}";
-                        final subtypeText = record['subtype'] ?? 'Cash';
-                        int balance = 0;
-                        for (int i = 0; i <= index; i++) {
-                          final currentRecord = historyList[i];
-                          balance += (currentRecord['cash_in'] as int? ?? 0);
-                          balance -= (currentRecord['cash_out'] as int? ?? 0);
-                        }
-
-                        return Card(
-                          color: AppColors.secondaryColor.withOpacity(0.1),
-                          margin: const EdgeInsets.symmetric(vertical: 5),
-                          child: ListTile(
-                            title: Text(
-                              "Date: ${_formatDate(record['date'])}",
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            subtitle: Row(
-                              children: [
-                                Text(
-                                  "$subtitleText ",
-                                  style: TextStyle(
-                                    color: isCashIn ? Colors.red : Colors.green,
-                                  ),
-                                ),
-                                const SizedBox(width: 10,),
-                                Text(
-                                  " || بقایا : $balance ",
-                                  style: const TextStyle(
-                                    color: Colors.yellow,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            trailing: Text(
-                              subtypeText,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontStyle: FontStyle.italic,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebar() {
-    return Container(
-      width: 250,
-      color: AppColors.secondaryColor.withOpacity(0.1),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 150,
-            color: AppColors.secondaryColor,
-            alignment: Alignment.center,
-            child: Text(
-              "Customer Manager",
-              style: TextStyle(
-                color: AppColors.mainColor,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.picture_as_pdf, color: Colors.white),
-            title: const Text(
-              "Export Data",
-              style: TextStyle(color: Colors.white),
-            ),
-            onTap: _exportData,
-          ),
-          ListTile(
-            leading: const Icon(Icons.file_download, color: Colors.white),
-            title: const Text(
-              "Export Database",
-              style: TextStyle(color: Colors.white),
-            ),
-            onTap: _exportDatabase,
-          ),
-          ListTile(
-            leading: const Icon(Icons.file_upload, color: Colors.white),
-            title: const Text(
-              "Import Database",
-              style: TextStyle(color: Colors.white),
-            ),
-            onTap: _importDatabase,
-          ),
-        ],
-      ),
-    );
-  }
 }

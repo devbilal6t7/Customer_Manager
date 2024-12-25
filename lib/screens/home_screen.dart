@@ -253,6 +253,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                 color: AppColors.mainColor,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
+                fontFamily: 'JameelNooriNastaleeqKasheeda',letterSpacing: 1
               ),
             ),
           ),
@@ -263,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                   leading: const Icon(Icons.history, color: Colors.white),
                   title: const Text(
                     "History    تاریخ  ",
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: Colors.white,fontFamily: 'JameelNooriNastaleeqKasheeda',letterSpacing: 2),
                   ),
                   onTap: () {
                     Navigator.of(context).push(
@@ -292,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                   leading: const Icon(Icons.man, color: Colors.white),
                   title: const Text(
                     "All Customers  گاہک",
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: Colors.white,fontFamily: 'JameelNooriNastaleeqKasheeda',letterSpacing: 2),
                   ),
                   onTap: () {
                     Navigator.push(
@@ -350,6 +351,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           Text(
             title,
             style: TextStyle(
+            fontFamily: 'JameelNooriNastaleeqKasheeda',letterSpacing: 2,
                 color: color, fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
@@ -388,7 +390,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       ),
       child: Text(
         title,
-        style: TextStyle(color: AppColors.mainColor, fontSize: 16),
+        style: TextStyle(color: AppColors.white, fontSize: 20,fontFamily: 'JameelNooriNastaleeqKasheeda',letterSpacing: 2),
       ),
     );
   }

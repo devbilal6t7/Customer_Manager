@@ -10,9 +10,9 @@ class CashInScreen extends StatefulWidget {
   State<CashInScreen> createState() => _CashInScreenState();
 }
 
-
 class _CashInScreenState extends State<CashInScreen> {
-  final TextEditingController customerSearchController = TextEditingController();
+  final TextEditingController customerSearchController =
+      TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final FocusNode searchFocusNode = FocusNode();
   final FocusNode amountFocusNode = FocusNode();
@@ -50,7 +50,7 @@ class _CashInScreenState extends State<CashInScreen> {
       } else {
         filteredCustomers = customers
             .where((customer) =>
-            customer['name'].toLowerCase().contains(query.toLowerCase()))
+                customer['name'].toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
@@ -174,7 +174,8 @@ class _CashInScreenState extends State<CashInScreen> {
   }
 
   void _showCustomSubtypeDialog() {
-    final TextEditingController customSubtypeController = TextEditingController();
+    final TextEditingController customSubtypeController =
+        TextEditingController();
 
     showDialog(
       context: context,
@@ -188,9 +189,11 @@ class _CashInScreenState extends State<CashInScreen> {
             child: Text(
               "تفصیل درج کریں",
               style: TextStyle(
-                color: AppColors.secondaryColor,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+                  color: AppColors.secondaryColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'JameelNooriNastaleeqKasheeda',
+                  letterSpacing: 2,
               ),
             ),
           ),
@@ -200,7 +203,10 @@ class _CashInScreenState extends State<CashInScreen> {
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: "اپنی تفصیل ٹائپ کریں۔",
-              hintStyle: const TextStyle(color: Colors.white70),
+              hintStyle: const TextStyle(
+                  color: Colors.white70,
+                  fontFamily: 'JameelNooriNastaleeqKasheeda',
+                  letterSpacing: 2),
               filled: true,
               fillColor: AppColors.mainColor.withOpacity(0.5),
               border: OutlineInputBorder(
@@ -237,7 +243,8 @@ class _CashInScreenState extends State<CashInScreen> {
                 final customSubtype = customSubtypeController.text.trim();
                 if (customSubtype.isNotEmpty) {
                   setState(() {
-                    selectedSubtype = customSubtype; // Update the selected subtype
+                    selectedSubtype =
+                        customSubtype; // Update the selected subtype
                   });
 
                   // Save the subtype in the database
@@ -263,7 +270,6 @@ class _CashInScreenState extends State<CashInScreen> {
     );
   }
 
-
   void _selectSubtype(String subtype) {
     setState(() {
       selectedSubtype = subtype;
@@ -276,7 +282,11 @@ class _CashInScreenState extends State<CashInScreen> {
     return Scaffold(
       backgroundColor: AppColors.mainColor,
       appBar: AppBar(
-        title: const Text(" وصول"),
+        title: const Text(
+          " وصول",
+          style: TextStyle(
+              fontFamily: 'JameelNooriNastaleeqKasheeda', letterSpacing: 2),
+        ),
         backgroundColor: AppColors.secondaryColor,
         foregroundColor: Colors.white,
       ),
@@ -294,7 +304,10 @@ class _CashInScreenState extends State<CashInScreen> {
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
                   hintText: "کسٹمر تلاش کریں۔",
-                  hintStyle: const TextStyle(color: Colors.white),
+                  hintStyle: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'JameelNooriNastaleeqKasheeda',
+                      letterSpacing: 2),
                   filled: true,
                   fillColor: AppColors.secondaryColor.withOpacity(0.2),
                   border: OutlineInputBorder(
@@ -320,11 +333,14 @@ class _CashInScreenState extends State<CashInScreen> {
                         ),
                       ),
                       Text(
-                        " بقایا : $balance",
+                        "   بقایا :     $balance",
                         style: TextStyle(
-                            color: balance >= 0 ? Colors.green : Colors.red,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold),
+                          color: balance >= 0 ? Colors.green : Colors.red,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'JameelNooriNastaleeqKasheeda',
+                          letterSpacing: 2,
+                        ),
                       ),
                     ],
                   ),
@@ -346,7 +362,7 @@ class _CashInScreenState extends State<CashInScreen> {
                               ? AppColors.secondaryColor
                               : Colors.white,
                           fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       tileColor: isSelected
@@ -371,7 +387,10 @@ class _CashInScreenState extends State<CashInScreen> {
                 cursorColor: Colors.white,
                 decoration: InputDecoration(
                   hintText: "وصول رقم درج کریں۔",
-                  hintStyle: const TextStyle(color: Colors.white),
+                  hintStyle: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'JameelNooriNastaleeqKasheeda',
+                      letterSpacing: 2),
                   filled: true,
                   fillColor: AppColors.secondaryColor.withOpacity(0.2),
                   border: OutlineInputBorder(
@@ -413,10 +432,8 @@ class _CashInScreenState extends State<CashInScreen> {
                           ? Colors.green
                           : AppColors.secondaryColor,
                     ),
-                    child:  Text(
-                      selectedSubtype != "Cash"
-                          ? selectedSubtype
-                          : "Other",
+                    child: Text(
+                      selectedSubtype != "Cash" ? selectedSubtype : "Other",
                     ),
                   ),
                 ],
@@ -426,7 +443,11 @@ class _CashInScreenState extends State<CashInScreen> {
                 icon: const Icon(Icons.attach_money, color: Colors.white),
                 label: const Text(
                   "Process Income وصول",
-                  style: TextStyle(color: Colors.white, fontSize: 18),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontFamily: 'JameelNooriNastaleeqKasheeda',
+                      letterSpacing: 2),
                 ),
                 onPressed: () async {
                   if (selectedCustomer == null) {
@@ -477,7 +498,7 @@ class _CashInScreenState extends State<CashInScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.secondaryColor,
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -490,4 +511,3 @@ class _CashInScreenState extends State<CashInScreen> {
     );
   }
 }
-

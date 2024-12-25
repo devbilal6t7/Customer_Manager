@@ -179,7 +179,8 @@ class _TodayEntriesScreenState extends State<TodayEntriesScreen>
             },
             icon: Icon(Icons.arrow_back_ios_rounded)),
         foregroundColor: Colors.white,
-        title: Text('Today\'s Cash Entries'),
+        centerTitle: true,
+        title: Text('آج کی نقد اندراجات', style: TextStyle(fontFamily: 'JameelNooriNastaleeqKasheeda',letterSpacing: 2),),
         backgroundColor: AppColors.mainColor,
         bottom: TabBar(
           indicator: BoxDecoration(color: Colors.white.withOpacity(0.3)),
@@ -187,9 +188,9 @@ class _TodayEntriesScreenState extends State<TodayEntriesScreen>
           indicatorSize: TabBarIndicatorSize.tab,
           controller: _tabController,
           indicatorColor: AppColors.secondaryColor,
-          labelStyle: TextStyle(color: Colors.white),
+          labelStyle: TextStyle(color: Colors.white,fontSize: 18,fontFamily: 'JameelNooriNastaleeqKasheeda',letterSpacing: 2),
           tabs: [
-            Tab(text: 'وصول'),
+            Tab(text: 'وصول',),
             Tab(text: ' مال/بل'),
           ],
         ),
